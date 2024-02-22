@@ -47,7 +47,7 @@ let userMessage = null; // Variable to store user's message
 const inputInitHeight = chatInput.scrollHeight;
 
 // Get the selected WebSocket server
-const websocketServer = document.querySelector("#websocket-server").value;
+const websocketServer = window.websocketServer;
 
 var ws = new WebSocket(websocketServer);
 
