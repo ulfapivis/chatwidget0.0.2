@@ -1,11 +1,15 @@
 import { styles } from './assets.js';
-document.addEventListener("DOMContentLoaded", function() {
-    // Create a <style> element
-    const styleElement = document.createElement('style');
-    // Set the CSS styles as the content of the <style> element
-    styleElement.innerHTML = styles;
-    // Append the <style> element to the <head> of the document
-    document.head.appendChild(styleElement);
+
+    document.addEventListener("DOMContentLoaded", function() {
+      // Create a <link> element
+      const linkElement = document.createElement('link');
+    
+      // Set the attributes of the <link> element
+      linkElement.rel = 'stylesheet';
+      linkElement.href = 'data:text/css;charset=UTF-8,' + encodeURIComponent(styles);
+    
+      // Append the <link> element to the <head> of the document
+      document.head.appendChild(linkElement);
   function initChatbotWidget(config) {
   
   // Insert the chatbot HTML into the 'app' div
@@ -17,24 +21,27 @@ document.addEventListener("DOMContentLoaded", function() {
       <span class="material-symbols-outlined">close</span>
     </button>   
     <div class="chatbot" style="position: fixed; ${config.position}: 0;">
-      <header>
+      <header style="background:${config.chatbotColor};">
         <h2>Restaurantbot</h2>
         <span class="close-btn material-symbols-outlined">close</span>
       </header>
       <ul class="chatbox">
         <li class="chat incoming">
-          <span class="material-symbols-outlined">smart_toy</span>
-          <p>Hej 👋<br>Välj restaurang. Klicka på knappen och ställ en fråga.</p>
+          <span class="material-symbols-outlined" style="background:${config.chatbotColor};">smart_toy</span>
+          <p>${config.welcomeMessage}</p>
         </li>
       </ul>
-      <div class="chat-input">
+      <div class="chat-input" >      
         <textarea placeholder="Enter a message..." spellcheck="false" required></textarea>
         <!-- <input type="hidden" id="imageUpload" accept="image/*"> -->
         <span id="send-btn" class="material-symbols-rounded">send</span>
-      </div>
+              
     </div>
+    <div class="footer"><p style="color:white;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+    <p>powered by <a href=" https://www.fxrsoft.com" target="_blank">fxrsoft</a>
+  </p></div>
+  </div>
   `;
-
   // Now that the chatbot HTML is inserted, you can select the elements
 const chatbotToggler = document.querySelector(".chatbot-toggler");
 const closeBtn = document.querySelector(".close-btn");
@@ -46,10 +53,8 @@ const imageUpload = document.querySelector("#imageUpload");
 let userMessage = null; // Variable to store user's message
 const inputInitHeight = chatInput.scrollHeight;
 
-// Get the selected WebSocket server
-const websocketServer = window.websocketServer;
-
-var ws = new WebSocket(websocketServer);
+var ws = new WebSocket(window.chatbotConfig.websocketAddress);
+var thinking = window.chatbotConfig.thinkingMessage;
 
 ws.onopen = function(e) {
     console.log("[open] Connection established");
@@ -65,19 +70,22 @@ ws.onopen = function(e) {
     console.log(`[error] ${error.message}`);
   };
 
-
 const createChatLi = (message, className, imgSrc) => {
-    // Create a chat <li> element with passed message and className
-    const chatLi = document.createElement("li");
-    chatLi.classList.add("chat", `${className}`);
-    let chatContent = className === "outgoing" ? `<div class="message-container"><p class="message-text"></p></div><br>` : `<span class="material-symbols-outlined">smart_toy</span><div class="message-container"><p class="message-text"></p></div>`;
-    if(imgSrc) {
-        chatContent += `<div class="image-container"><img class="chat-image" src="${imgSrc}" alt="Uploaded image"/></div>`;
-    }
-    chatLi.innerHTML = chatContent;
-    chatLi.querySelector(".message-text").textContent = message;
-    return chatLi; // return chat <li> element
+  // Create a chat <li> element with passed message and className
+  const chatLi = document.createElement("li");
+  chatLi.classList.add("chat", `${className}`);
+
+  let chatContent = className === "outgoing" ? `<div class="message-container" style="background:${config.chatbotColor}; border-radius: 10px 10px 0 10px;"><p class="message-text"></p></div><br>` : `<span class="material-symbols-outlined" style="background:${config.chatbotColor};">smart_toy</span><div class="message-container" ><p class="message-text"></p></div>`;
+
+  if(imgSrc) {
+    chatContent += `<div class="image-container"><img class="chat-image" src="${imgSrc}" alt="Uploaded image"/></div>`;
+  }
+  chatLi.innerHTML = chatContent;
+  chatLi.querySelector(".message-text").textContent = message;
+
+  return chatLi; // return chat <li> element
 }
+
 
 // Function to send the form data and file as a single message
 function sendFormData(textFieldValue, imageClassificationChecked, file) {
@@ -96,13 +104,14 @@ const handleChat = (data) => {
 
     // Clear the input textarea and set its height to default
     chatInput.value = "";
-    chatInput.style.height = `${inputInitHeight}px`;
+    chatInput.style.height = `${inputInitHeight}px`;    
 
     // Append the user's message to the chatbox
     let reader = new FileReader();
     reader.onloadend = function() {
         chatbox.appendChild(createChatLi(userMessage, "outgoing", reader.result));
         chatbox.scrollTo(0, chatbox.scrollHeight);
+        
     }
     {
         chatbox.appendChild(createChatLi(userMessage, "outgoing"));
@@ -110,12 +119,16 @@ const handleChat = (data) => {
         sendFormData(userMessage, false, null);
     }
     
+      // Access the thinkingMessage and messageType from the chatbotConfig object
+    const thinkingMessage = window.chatbotConfig.thinkingMessage;
+    const messageType = window.chatbotConfig.messageType;
+
     setTimeout(() => {
-        // Display "Thinking..." message while waiting for the response
-        const incomingChatLi = createChatLi("Thinking...", "incoming");
-        chatbox.appendChild(incomingChatLi);
-        chatbox.scrollTo(0, chatbox.scrollHeight);
-    }, 600);
+      // Display the thinkingMessage from chatbotConfig while waiting for the response
+      const incomingChatLi = createChatLi(window.chatbotConfig.thinkingMessage, "incoming");
+      chatbox.appendChild(incomingChatLi);
+      chatbox.scrollTo(0, chatbox.scrollHeight);
+  }, 600);
 
 }
 
@@ -128,7 +141,7 @@ ws.onmessage = function(event) {
         // Create a button element
         let btn = document.createElement('button');
         btn.textContent = data.text;
-        btn.style.backgroundColor = '#724ae8'; // Same color as the avatar
+        btn.style.backgroundColor = config.chatbotColor; // Same color as the avatar
         btn.style.color = 'white'; // White text
         btn.style.borderRadius = '12px'; // Rounded corners
         btn.style.border = 'none'; // No border
@@ -136,7 +149,7 @@ ws.onmessage = function(event) {
         btn.style.textAlign = 'center'; // Centered text
         btn.style.textDecoration = 'none'; // No underline
         btn.style.display = 'inline-block';
-        btn.style.fontSize = '16px';
+        btn.style.fontSize = '12px';
         btn.style.margin = '4px 2px';
         btn.style.cursor = 'pointer'; // Cursor pointer on hover
         btn.onclick = function() {
@@ -150,13 +163,16 @@ ws.onmessage = function(event) {
         // Create a new paragraph element
         let p = document.createElement('p');
         p.textContent = data.text;
-        
+        p.style.fontSize = '12px';
         // Append the paragraph to the chatbox
         chatbox.appendChild(p);
     } else {
         // Handle text message
         if (lastMessageElement) {
             lastMessageElement.textContent = data.message;
+            // Change the font size to 14px
+            lastMessageElement.style.fontSize = "16px";
+            
         }
     }
 
@@ -180,6 +196,7 @@ chatInput.addEventListener("input", () => {
     // Adjust the height of the input textarea based on its content
     chatInput.style.height = `${inputInitHeight}px`;
     chatInput.style.height = `${chatInput.scrollHeight}px`;
+    
 });
 
 chatInput.addEventListener("keydown", (e) => {
